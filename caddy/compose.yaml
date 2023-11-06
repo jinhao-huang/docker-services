@@ -14,6 +14,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - caddy_data:/data
+      - /etc/ssl/certs/caddy:/etc/ssl/certs/caddy:ro
+      - /etc/ssl/private/caddy:/etc/ssl/private/caddy:ro
     restart: unless-stopped
 
 networks:
