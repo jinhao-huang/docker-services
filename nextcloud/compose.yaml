@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  nextcloud:
+    image: nextcloud/all-in-one:latest
+    restart: unless-stopped
+    container_name: nextcloud-aio-mastercontainer
+    environment:
+      - APACHE_PORT=11000
+    volumes:
+      - nextcloud_aio_mastercontainer:/mnt/docker-aio-config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - caddy
+    labels:
+      caddy: ${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 11000}}"
+      caddy.tls: "/etc/ssl/certs/caddy/certificate.pem /etc/ssl/private/caddy/key.pem"
+
+networks:
+  caddy:
+    external: true
+
+volumes:
+  nextcloud_aio_mastercontainer:
+    name: nextcloud_aio_mastercontainer
