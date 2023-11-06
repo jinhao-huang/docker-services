@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: always
+    networks:
+      - caddy
+    volumes:
+      - ./uptime-kuma-data:/app/data
+    labels:
+      caddy: ${DOMAIN}
+      caddy.reverse_proxy: "* {{upstreams 3001}}"
+      caddy.tls: "/etc/ssl/certs/caddy-certificate.pem /etc/ssl/private/caddy-key.pem"
+
+networks:
+  caddy:
+    external: true
