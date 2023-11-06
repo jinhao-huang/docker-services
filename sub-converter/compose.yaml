@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  subconverter:
+    image: tindy2013/subconverter:latest
+    container_name: sub-converter
+    volumes:
+      - ./base/pref.toml:/base/pref.toml
+      - ./base/profiles:/base/profiles
+    restart: unless-stopped
+    networks:
+      - caddy
+    labels:
+      caddy: ${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 25500}}"
+      caddy.tls: "/etc/ssl/certs/caddy/certificate.pem /etc/ssl/private/caddy/key.pem"
+
+networks:
+  caddy:
+    external: true
