@@ -32,6 +32,7 @@ services:
       - RPC_PORT=6800
     volumes:
       - ./aria2/config:/config
+      - ./aria2/downloads:/downloads
       - temp_data:/data
 
 volumes:
