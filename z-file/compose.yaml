@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  z-file:
+    container_name: z-file
+    image: zhaojun1998/zfile
+    networks:
+      - caddy
+    restart: unless-stopped
+    expose:
+      - '8080'
+    volumes:
+      - './db:/root/.zfile-v4/db'
+      - './logs:/root/.zfile-v4/logs'
+      - './file:/data/file'
+      - './application.properties:/root/application.properties'
+    labels:
+      caddy: ${DOMAIN}
+      caddy.reverse_proxy: "* {{upstreams 8080}}"
+      caddy.tls: "/etc/ssl/certs/caddy/certificate.pem /etc/ssl/private/caddy/key.pem"
+
+networks:
+  caddy:
+    external: true
