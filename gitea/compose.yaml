@@ -1,0 +1,28 @@
+version: "3"
+
+networks:
+  caddy:
+    external: true
+  gitea:
+    external: false
+
+volumes:
+  gitea:
+    driver: local
+
+services:
+  server:
+    image: gitea/gitea:1
+    container_name: gitea
+    restart: always
+    networks:
+      - caddy
+      - gitea
+    volumes:
+      - gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      caddy: ${DOMAIN}
+      caddy.reverse_proxy: "* {{upstreams 3000}}"
+      caddy.tls: "/etc/ssl/certs/caddy/certificate.pem /etc/ssl/private/caddy/key.pem"
