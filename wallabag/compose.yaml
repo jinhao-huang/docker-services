@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  wallabag:
+    container_name: wallabag
+    image: wallabag/wallabag:2.6.9
+    restart: unless-stopped
+    volumes:
+      - ./data/data:/var/www/wallabag/data
+      - ./data/images:/var/www/wallabag/web/assets/images
+    networks:
+      - caddy
+    labels:
+      caddy: ${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 80}}"
+      caddy.tls: "/etc/ssl/certs/caddy/certificate.pem /etc/ssl/private/caddy/key.pem"
+    environment:
+      - SYMFONY__ENV__DOMAIN_NAME=${DOMAIN}
+      - SYMFONY__ENV__SERVER_NAME=${SERVER_NAME}
+      - SYMFONY__ENV__MAILER_DSN=${MAILER_DSN}
+      - SYMFONY__ENV__FROM_EMAIL=${FROM_EMAIL}
+
+networks:
+  caddy:
+    external: true
