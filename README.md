@@ -6,13 +6,19 @@ This is my personal docker service template repository.
 
 ## Preliminary work
 
-1. Create a caddy network using the following command:
+1. You can add current user to `docker` group
+
+   ```shell
+   sudo usermod -aG docker $USER
+   ```
+
+2. Create a caddy network using the following command:
 
    ```shell
    docker network create caddy
    ```
 
-2. Create a wildcard certificate and private key in the `caddy/certs` directory:
+3. Create a wildcard certificate and private key in the `caddy/certs` directory:
 
    ```shell
    vim caddy/certs/certificate.pem
