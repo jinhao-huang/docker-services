@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   wallabag:
     container_name: wallabag

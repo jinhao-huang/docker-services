@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   z-file:
     container_name: z-file
