@@ -1,42 +1,44 @@
 services:
   miniflux:
-    image: miniflux/miniflux:latest
+    image: miniflux/miniflux:2.2.0
     container_name: miniflux
     restart: always
     networks:
       - caddy
       - internal
     labels:
-      caddy: ${DOMAIN}
-      caddy.reverse_proxy: "* {{upstreams 8080}}"
-      caddy.tls: "/etc/ssl/certs/caddy/certificate.pem /etc/ssl/private/caddy/key.pem"
+      - caddy=${DOMAIN}
+      - caddy.reverse_proxy="{{upstreams 8080}}"
+      - caddy.tls=/etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgres://miniflux:secret@db/miniflux?sslmode=disable
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/miniflux?sslmode=disable
+      - DATABASE_URL=postgres://miniflux:${POSTGRES_PASSWORD}@db/miniflux?sslmode=disable
       - RUN_MIGRATIONS=1
       - CREATE_ADMIN=1
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - PORT:8080
   db:
     image: postgres:15
+    container_name: miniflux-db
     restart: always
     networks:
       - internal
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_USER=miniflux
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=miniflux
     volumes:
-      - miniflux-db:/var/lib/postgresql/data
+      - data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "miniflux"]
       interval: 10s
       start_period: 30s
 volumes:
-  miniflux-db:
+  data:
+    name: miniflux-data
 
 networks:
   caddy:
@@ -44,3 +46,4 @@ networks:
   internal:
     external: false
     driver: bridge
+    name: miniflux-internal
