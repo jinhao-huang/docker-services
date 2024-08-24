@@ -31,14 +31,14 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=miniflux
     volumes:
-      - data:/var/lib/postgresql/data
+      - db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "miniflux"]
       interval: 10s
       start_period: 30s
 volumes:
-  data:
-    name: miniflux-data
+  db:
+    name: miniflux-db
 
 networks:
   caddy:
