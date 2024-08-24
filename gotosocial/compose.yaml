@@ -1,0 +1,72 @@
+services:
+  gotosocial:
+    image: superseriousbusiness/gotosocial:0.16.0
+    container_name: gotosocial
+    restart: always
+    networks:
+      - caddy
+      - internal
+    environment:
+      GTS_HOST: ${DOMAIN}
+      GTS_ACCOUNT_DOMAIN: ${ROOT_DOMAIN}
+      GTS_DB_TYPE: postgres
+      GTS_DB_ADDRESS: db
+      GTS_DB_USER: "gotosocial"
+      GTS_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      GTS_DB_DATABASE: "gotosocial"
+      GTS_LETSENCRYPT_ENABLED: "false"
+      GTS_LETSENCRYPT_EMAIL_ADDRESS: ""
+      GTS_LANDING_PAGE_USER: ${LANDING_PAGE_USER}
+      GTS_ADVANCED_RATE_LIMIT_REQUESTS: 0
+      GTS_INSTANCE_LANGUAGES: "en,zh"
+      GTS_STORAGE_BACKEND: ${STORAGE_BACKEND}
+      GTS_STORAGE_S3_ENDPOINT: ${S3_ENDPOINT}
+      GTS_STORAGE_S3_BUCKET: ${S3_BUCKET}
+      GTS_STORAGE_S3_REDIRECT_URL: ${S3_REDIRECT_URL}
+      GTS_STORAGE_S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      GTS_STORAGE_S3_SECRET_KEY: ${S3_SECRET_KEY}
+      GTS_PORT: 8080
+      TZ: UTC
+    volumes:
+      - storage:/gotosocial/storage
+    labels:
+      - caddy_0=${DOMAIN}
+      - caddy_0.encode=zstd gzip
+      - caddy_0.reverse_proxy="{{upstreams 8080}}"
+      - caddy_0.reverse_proxy.flush_interval=-1
+      - caddy_0.tls=/etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem
+      - caddy_1=${ROOT_DOMAIN}
+      - caddy_1.1_redir=/.well-known/host-meta* https://${DOMAIN}{uri} permanent
+      - caddy_1.2_redir=/.well-known/webfinger* https://${DOMAIN}{uri} permanent
+      - caddy_1.3_redir=/.well-known/nodeinfo* https://${DOMAIN}{uri} permanent
+
+  db:
+    image: postgres:16
+    container_name: gotosocial-db
+    restart: always
+    networks:
+      - internal
+    environment:
+      - POSTGRES_USER=gotosocial
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=gotosocial
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "miniflux"]
+      interval: 10s
+      start_period: 30s
+
+networks:
+  caddy:
+    external: true
+  internal:
+    external: false
+    driver: bridge
+    name: gotosocial-internal
+
+volumes:
+  storage:
+    name: gotosocial-storage
+  db:
+    name: gotosocial-db
