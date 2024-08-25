@@ -53,7 +53,7 @@ services:
     volumes:
       - db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "miniflux"]
+      test: ["CMD", "pg_isready", "-U", "gotosocial"]
       interval: 10s
       start_period: 30s
 
