@@ -1,0 +1,18 @@
+name: synapse-admin 
+
+services:
+  synapse-admin:
+    container_name: synapse-admin
+    hostname: synapse-admin
+    image: awesometechnologies/synapse-admin:0.10.3
+    networks:
+      - caddy
+    labels:
+      - caddy=${DOMAIN}
+      - caddy.reverse_proxy="{{upstreams 80}}"
+      - caddy.tls=/etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem
+    restart: unless-stopped
+
+networks:
+  caddy:
+    external: true
