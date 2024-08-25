@@ -15,6 +15,7 @@ services:
     volumes:
       - data:/data
       - media:/data/media
+      - media-storage:/data/media_store
       # - ./files:/data
       # - /path/to/ssd:/data/uploads
       # - /path/to/large_hdd:/data/media
@@ -56,8 +57,11 @@ volumes:
     name: synapse-db
   data:
     name: synapse-data
+    external: true
   media:
     name: synapse-media
+  media-storage:
+    name: synapse-media-storage
 
 networks:
   caddy:
