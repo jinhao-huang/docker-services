@@ -1,0 +1,68 @@
+name: synapse
+
+services:
+  synapse:
+    image: matrixdotorg/synapse:v1.113.0
+    container_name: synapse
+    restart: unless-stopped
+    networks:
+      - caddy
+      - internal
+    environment:
+      - SYNAPSE_CONFIG_DIR=/data
+      - SYNAPSE_CONFIG_PATH=/data/homeserver.yaml
+      - TZ=UTC
+    volumes:
+      - data:/data
+      - media:/data/media
+      # - ./files:/data
+      # - /path/to/ssd:/data/uploads
+      # - /path/to/large_hdd:/data/media
+    depends_on:
+      - db
+    labels:
+      caddy_0: ${DOMAIN}
+      caddy_0.1_reverse_proxy: "/ {{upstreams 8008}}"
+      caddy_0.2_reverse_proxy: "/_matrix/* {{upstreams 8008}}"
+      caddy_0.3_reverse_proxy: "/_synapse/client/* {{upstreams 8008}}"
+      caddy_0.4_reverse_proxy: "/_synapse/admin/* {{upstreams 8008}}"
+      caddy_0.5_tls: /etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem
+      caddy_1: ${ROOT_DOMAIN}
+      caddy_1.1_header: /.well-known/matrix/* Content-Type application/json
+      caddy_1.2_header: /.well-known/matrix/* Access-Control-Allow-Origin *
+      caddy_1.3_respond: "/.well-known/matrix/server \"{\\\"m.server\\\": \\\"${DOMAIN}:443\\\"}\""
+      caddy_1.4_respond: /.well-known/matrix/client `{"m.homeserver":{"base_url":"https://${DOMAIN}"}}`
+      # caddy_1.4_respond: /.well-known/matrix/client `{"m.homeserver":{"base_url":"https://${DOMAIN}"},"m.identity_server":{"base_url":"https://identity.${ROOT_DOMAIN}"}}`
+
+  db:
+    image: postgres:16
+    container_name: synapse-db
+    networks:
+      - internal
+    environment:
+      - POSTGRES_USER=synapse
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=synapse
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "synapse"]
+      interval: 10s
+      start_period: 30s
+
+volumes:
+  db:
+    name: synapse-db
+  data:
+    name: synapse-data
+  media:
+    name: synapse-media
+
+networks:
+  caddy:
+    external: true
+  internal:
+    external: false
+    driver: bridge
+    name: synapse-internal
