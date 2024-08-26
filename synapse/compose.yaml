@@ -14,8 +14,6 @@ services:
       - TZ=UTC
     volumes:
       - data:/data
-      - media:/data/media
-      - media-storage:/data/media_store
       # - ./files:/data
       # - /path/to/ssd:/data/uploads
       # - /path/to/large_hdd:/data/media
@@ -34,6 +32,8 @@ services:
       caddy_1.3_respond: "/.well-known/matrix/server \"{\\\"m.server\\\": \\\"${DOMAIN}:443\\\"}\""
       caddy_1.4_respond: /.well-known/matrix/client `{"m.homeserver":{"base_url":"https://${DOMAIN}"}}`
       # caddy_1.4_respond: /.well-known/matrix/client `{"m.homeserver":{"base_url":"https://${DOMAIN}"},"m.identity_server":{"base_url":"https://identity.${ROOT_DOMAIN}"}}`
+      caddy_1.5_reverse_proxy: "/_matrix/* {{upstreams 8008}}"
+      caddy_1.6_reverse_proxy: "/_synapse/* {{upstreams 8008}}"
 
   db:
     image: postgres:16
@@ -58,10 +58,6 @@ volumes:
   data:
     name: synapse-data
     external: true
-  media:
-    name: synapse-media
-  media-storage:
-    name: synapse-media-storage
 
 networks:
   caddy:
