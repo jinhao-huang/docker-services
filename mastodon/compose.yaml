@@ -1,0 +1,187 @@
+name: mastodon
+
+services:
+  db:
+    restart: always
+    image: postgres:16
+    container_name: ${COMPOSE_PROJECT_NAME}-db
+    shm_size: 256mb
+    networks:
+      - internal_network
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres']
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${COMPOSE_PROJECT_NAME}
+      POSTGRES_DB: ${COMPOSE_PROJECT_NAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?database password required}
+      # POSTGRES_HOST_AUTH_METHOD: trust
+
+  redis:
+    restart: always
+    image: redis:7
+    container_name: ${COMPOSE_PROJECT_NAME}-redis
+    networks:
+      - internal_network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+    volumes:
+      - redis:/data
+
+  # es:
+  #   restart: always
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.17.4
+  #   environment:
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m -Des.enforce.bootstrap.checks=true"
+  #     - "xpack.license.self_generated.type=basic"
+  #     - "xpack.security.enabled=false"
+  #     - "xpack.watcher.enabled=false"
+  #     - "xpack.graph.enabled=false"
+  #     - "xpack.ml.enabled=false"
+  #     - "bootstrap.memory_lock=true"
+  #     - "cluster.name=es-mastodon"
+  #     - "discovery.type=single-node"
+  #     - "thread_pool.write.queue_size=1000"
+  #   networks:
+  #      - external_network
+  #      - internal_network
+  #   healthcheck:
+  #      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+  #   volumes:
+  #      - ./elasticsearch:/usr/share/elasticsearch/data
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+  #   ports:
+  #     - '127.0.0.1:9200:9200'
+
+  web:
+    image: ghcr.io/mastodon/mastodon:v4.2.12
+    restart: always
+    env_file: mastodon.env
+    command: bash -c "rm -f /mastodon/tmp/pids/server.pid; bundle exec rails s -p 3000"
+    container_name: ${COMPOSE_PROJECT_NAME}-web
+    networks:
+      - caddy
+      - external_network
+      - internal_network
+    environment:
+      - LOCAL_DOMAIN=${ROOT_DOMAIN?root domain required}
+      - WEB_DOMAIN=${DOMAIN? doamin required}
+      - DB_HOST=db
+      - DB_USER=${COMPOSE_PROJECT_NAME}
+      - DB_NAME=${COMPOSE_PROJECT_NAME}
+      - DB_PASS=${POSTGRES_PASSWORD:?database password required}
+      - REDIS_HOST=redis
+    healthcheck:
+      # prettier-ignore
+      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:3000/health || exit 1']
+    labels:
+      caddy_0: ${ROOT_DOMAIN}
+      caddy_0.0_redir: /.well-known/webfinger* https://${DOMAIN}{uri} permanent
+      caddy_0.1_redir: /.well-known/host-meta* https://${DOMAIN}{uri} permanent
+      caddy_0.2_redir: /.well-known/nodeinfo* https://${DOMAIN}{uri} permanent
+      caddy_1: ${DOMAIN}
+      caddy_1.0_encode: gzip
+      # caddy_1.1_reverse_proxy: "/api/v1/streaming* {{upstreams 4000}}"
+      caddy_1.2_reverse_proxy: "{{upstreams 3000}}"
+      caddy_1.3_tls: /etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem
+    depends_on:
+      - db
+      - redis
+      # - es
+    volumes:
+      - public:/mastodon/public/system
+
+  streaming:
+    image: ghcr.io/mastodon/mastodon:v4.2.12
+    restart: always
+    env_file: mastodon.env
+    command: node ./streaming
+    container_name: ${COMPOSE_PROJECT_NAME}-streaming
+    networks:
+      - caddy
+      - external_network
+      - internal_network
+    environment:
+      - LOCAL_DOMAIN=${ROOT_DOMAIN?root domain required}
+      - WEB_DOMAIN=${DOMAIN? doamin required}
+      - DB_HOST=db
+      - DB_USER=${COMPOSE_PROJECT_NAME}
+      - DB_NAME=${COMPOSE_PROJECT_NAME}
+      - DB_PASS=${POSTGRES_PASSWORD:?database password required}
+      - REDIS_HOST=redis
+    labels:
+      caddy_1: ${DOMAIN}
+      caddy_1.0_encode: gzip
+      caddy_1.1_reverse_proxy: "/api/v1/streaming* {{upstreams 4000}}"
+      # caddy_1.2_reverse_proxy: "{{upstreams 3000}}"
+      caddy_1.3_tls: /etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem
+    healthcheck:
+      # prettier-ignore
+      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:4000/api/v1/streaming/health || exit 1']
+    depends_on:
+      - db
+      - redis
+
+  sidekiq:
+    image: ghcr.io/mastodon/mastodon:v4.2.12
+    restart: always
+    env_file: mastodon.env
+    command: bundle exec sidekiq
+    container_name: ${COMPOSE_PROJECT_NAME}-sidekiq
+    depends_on:
+      - db
+      - redis
+    networks:
+      - external_network
+      - internal_network
+    volumes:
+      - public:/mastodon/public/system
+    environment:
+      - LOCAL_DOMAIN=${ROOT_DOMAIN?root domain required}
+      - WEB_DOMAIN=${DOMAIN? doamin required}
+      - DB_HOST=db
+      - DB_USER=${COMPOSE_PROJECT_NAME}
+      - DB_NAME=${COMPOSE_PROJECT_NAME}
+      - DB_PASS=${POSTGRES_PASSWORD:?database password required}
+      - REDIS_HOST=redis
+    healthcheck:
+      test: ['CMD-SHELL', "ps aux | grep '[s]idekiq\ 6' || false"]
+
+  ## Uncomment to enable federation with tor instances along with adding the following ENV variables
+  ## http_proxy=http://privoxy:8118
+  ## ALLOW_ACCESS_TO_HIDDEN_SERVICE=true
+  # tor:
+  #   image: sirboops/tor
+  #   networks:
+  #      - external_network
+  #      - internal_network
+  #
+  # privoxy:
+  #   image: sirboops/privoxy
+  #   volumes:
+  #     - ./priv-config:/opt/config
+  #   networks:
+  #     - external_network
+  #     - internal_network
+
+networks:
+  caddy:
+    external: true
+  external_network:
+  internal_network:
+    internal: true
+
+volumes:
+  db:
+    name: ${COMPOSE_PROJECT_NAME}-db
+  redis:
+    name: ${COMPOSE_PROJECT_NAME}-redis
+  public:
+    name: ${COMPOSE_PROJECT_NAME}-public
