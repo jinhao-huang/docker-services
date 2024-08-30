@@ -20,20 +20,20 @@ services:
     depends_on:
       - db
     labels:
-      caddy_0: ${DOMAIN}
-      caddy_0.1_reverse_proxy: "/ {{upstreams 8008}}"
-      caddy_0.2_reverse_proxy: "/_matrix/* {{upstreams 8008}}"
-      caddy_0.3_reverse_proxy: "/_synapse/client/* {{upstreams 8008}}"
-      caddy_0.4_reverse_proxy: "/_synapse/admin/* {{upstreams 8008}}"
-      caddy_0.5_tls: /etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem
-      caddy_1: ${ROOT_DOMAIN}
-      caddy_1.1_header: /.well-known/matrix/* Content-Type application/json
-      caddy_1.2_header: /.well-known/matrix/* Access-Control-Allow-Origin *
-      caddy_1.3_respond: "/.well-known/matrix/server \"{\\\"m.server\\\": \\\"${DOMAIN}:443\\\"}\""
-      caddy_1.4_respond: /.well-known/matrix/client `{"m.homeserver":{"base_url":"https://${DOMAIN}"}}`
-      # caddy_1.4_respond: /.well-known/matrix/client `{"m.homeserver":{"base_url":"https://${DOMAIN}"},"m.identity_server":{"base_url":"https://identity.${ROOT_DOMAIN}"}}`
-      caddy_1.5_reverse_proxy: "/_matrix/* {{upstreams 8008}}"
-      caddy_1.6_reverse_proxy: "/_synapse/* {{upstreams 8008}}"
+      caddy_0: ${ROOT_DOMAIN}
+      caddy_0.10_header: /.well-known/matrix/* Content-Type application/json
+      caddy_0.11_header: /.well-known/matrix/* Access-Control-Allow-Origin *
+      caddy_0.12_respond: "/.well-known/matrix/server \"{\\\"m.server\\\": \\\"${DOMAIN}:443\\\"}\""
+      caddy_0.13_respond: /.well-known/matrix/client `{"m.homeserver":{"base_url":"https://${DOMAIN}"}}`
+      # caddy_0.13_respond: /.well-known/matrix/client `{"m.homeserver":{"base_url":"https://${DOMAIN}"},"m.identity_server":{"base_url":"https://identity.${ROOT_DOMAIN}"}}`
+      caddy_0.14_reverse_proxy: "/_matrix/* {{upstreams 8008}}"
+      caddy_0.15_reverse_proxy: "/_synapse/* {{upstreams 8008}}"
+      caddy_1: ${DOMAIN}
+      caddy_1.0_reverse_proxy: "/ {{upstreams 8008}}"
+      caddy_1.1_reverse_proxy: "/_matrix/* {{upstreams 8008}}"
+      caddy_1.2_reverse_proxy: "/_synapse/client/* {{upstreams 8008}}"
+      caddy_1.3_reverse_proxy: "/_synapse/admin/* {{upstreams 8008}}"
+      caddy_1.4_tls: /etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem
 
   db:
     image: postgres:16
