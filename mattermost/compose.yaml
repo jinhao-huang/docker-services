@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE}:${POSTGRES_IMAGE_TAG}
+    restart: ${RESTART_POLICY}
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    networks:
+      - internal
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      # timezone inside container
+      - TZ
+
+      # necessary Postgres options/variables
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      # - MM_USERNAME=${POSTGRES_USER}
+      # - MM_PASSWORD=${POSTGRES_PASSWORD}
+      # - MM_DBNAME=${POSTGRES_DB}
+
+  mattermost:
+    depends_on:
+      - postgres
+    image: ${MATTERMOST_IMAGE}:${MATTERMOST_IMAGE_TAG}
+    restart: ${RESTART_POLICY}
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 200
+    read_only: ${MATTERMOST_CONTAINER_READONLY}
+    tmpfs:
+      - /tmp
+    networks:
+      - caddy
+      - internal
+    labels:
+      - caddy=${DOMAIN}
+      - caddy.reverse_proxy="{{upstreams 8000}}"
+      - caddy.tls=${CERT_PATH} ${KEY_PATH}
+    volumes:
+      - data:/mattermost:rw
+    environment:
+      # timezone inside container
+      - TZ
+
+      # necessary Mattermost options/variables (see env.example)
+      - MM_SQLSETTINGS_DRIVERNAME
+      - MM_SQLSETTINGS_DATASOURCE
+
+      # necessary for bleve
+      - MM_BLEVESETTINGS_INDEXDIR=/mattermost/bleve-indexes
+
+      # additional settings
+      - MM_SERVICESETTINGS_SITEURL
+
+      - DB_HOST=postgres
+
+      - MM_SERVICESETTINGS_ENABLELOCALMODE
+
+volumes:
+  db:
+    name: mattermost-db
+  data:
+    name: mattermost-data
+
+networks:
+  caddy:
+    external: true
+  internal:
+    external: false
+    driver: bridge
+    name: mattermost-internal
