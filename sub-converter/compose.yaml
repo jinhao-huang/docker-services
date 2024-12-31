@@ -11,7 +11,7 @@ services:
     labels:
       caddy: ${DOMAIN}
       caddy.reverse_proxy: "{{upstreams 25500}}"
-      caddy.tls: "/etc/ssl/certs/caddy/certificate.pem /etc/ssl/private/caddy/key.pem"
+      caddy.tls: "/etc/ssl/certs/caddy/${ROOT_DOMAIN}.pem /etc/ssl/private/caddy/${ROOT_DOMAIN}.pem"
 
 networks:
   caddy:
